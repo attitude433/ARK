@@ -1,0 +1,6 @@
+{
+  "source": "ark:finesse",
+  "target": "minecraft:generic.attack_speed",
+  "operation": "add_multiplied_base",
+  "per_point": 0.01
+}

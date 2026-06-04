@@ -1,0 +1,6 @@
+{
+  "source": "ark:endurance",
+  "target": "minecraft:generic.max_health",
+  "operation": "add_value",
+  "per_point": 0.5
+}

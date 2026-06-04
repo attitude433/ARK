@@ -1,0 +1,6 @@
+{
+  "source": "ark:swiftness",
+  "target": "minecraft:generic.movement_speed",
+  "operation": "add_multiplied_base",
+  "per_point": 0.01
+}

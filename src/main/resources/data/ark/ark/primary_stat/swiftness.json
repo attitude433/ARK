@@ -1,0 +1,6 @@
+{
+  "display_name": "Swiftness",
+  "default_value": 0,
+  "min": 0,
+  "max": 100
+}
