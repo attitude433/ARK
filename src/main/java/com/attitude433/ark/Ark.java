@@ -4,6 +4,7 @@ import com.attitude433.ark.engine.StatEngine;
 import com.attitude433.ark.player.ArkAttachments;
 import com.attitude433.ark.player.PlayerStats;
 import com.mojang.logging.LogUtils;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.IEventBus;
@@ -14,6 +15,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerXpEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -43,6 +45,13 @@ public class Ark {
     @EventBusSubscriber(modid = MODID, bus = EventBusSubscriber.Bus.GAME)
     public static final class LifecycleHandler {
         private LifecycleHandler() {}
+
+        // 인내 — 능력치 → 받는 피해 % 감소. *현재는 하드코드*: 마력·제압과 함께
+        // "효과 부품(damage_reduction 등) 데이터팩 표현"으로 일반화 예정.
+        private static final ResourceLocation ENDURANCE_ID =
+                ResourceLocation.fromNamespaceAndPath(MODID, "endurance");
+        private static final float ENDURANCE_PER_POINT_PCT = 0.005f; // 1pt = 0.5% 감소 (한 스탯 몰빵 만렙 150pt = 75%)
+        private static final float ENDURANCE_REDUCTION_CAP = 0.95f;  // 절대 무적 방지
 
         /**
          * 데이터팩 동기화 시점에 default_value 보정 + 재계산.
@@ -122,6 +131,22 @@ public class Ark {
             clone.experienceLevel = original.experienceLevel;
             clone.experienceProgress = original.experienceProgress;
             clone.totalExperience = original.totalExperience;
+        }
+
+        /**
+         * 인내(endurance) 비율 피해 감소.
+         * 갑옷·인챈트 등 모든 vanilla 감소가 적용된 *최종 데미지*에 곱연산.
+         * (※ 데이터팩 주도 설계에서 살짝 벗어난 하드코드 — 마력·제압 슬라이스에서
+         * 효과 부품(damage_reduction)으로 일반화 예정.)
+         */
+        @SubscribeEvent
+        public static void onIncomingDamage(LivingIncomingDamageEvent event) {
+            if (!(event.getEntity() instanceof ServerPlayer sp)) return;
+            PlayerStats stats = sp.getData(ArkAttachments.PLAYER_STATS);
+            int endurance = stats.get(ENDURANCE_ID);
+            if (endurance <= 0) return;
+            float pct = Math.min(ENDURANCE_REDUCTION_CAP, endurance * ENDURANCE_PER_POINT_PCT);
+            event.setAmount(event.getAmount() * (1.0f - pct));
         }
     }
 }
