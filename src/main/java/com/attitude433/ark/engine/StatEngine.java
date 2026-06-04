@@ -47,8 +47,9 @@ public final class StatEngine {
     }
 
     /**
-     * 데이터팩에 정의된 능력치 중 PlayerStats에 *없는* 항목을 {@code default_value}로 채운 뒤 재계산.
-     * 신규 플레이어·신규 데이터팩 능력치 발견 시 호출.
+     * 데이터팩에 정의된 능력치 중 PlayerStats에 *없는* 항목을 {@code default_value}로 채우고,
+     * 플레이어의 현재 경험치 레벨을 {@code highestLevel}에 반영한 뒤 재계산.
+     * 신규 플레이어·신규 데이터팩 능력치 발견 시·기존 월드에 모드가 추가됐을 때 호출.
      */
     public static void ensureDefaultsAndRecompute(ServerPlayer player) {
         MinecraftServer server = player.getServer();
@@ -63,6 +64,8 @@ public final class StatEngine {
                 stats.set(id, entry.getValue().defaultValue());
             }
         }
+        // 현재 경험치 레벨도 highestLevel에 반영 (모드 추가 후 첫 진입 등).
+        stats.updateHighestLevel(player.experienceLevel);
         recompute(player);
     }
 
