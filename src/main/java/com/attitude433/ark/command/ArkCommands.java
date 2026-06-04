@@ -1,11 +1,13 @@
 package com.attitude433.ark.command;
 
 import com.attitude433.ark.Ark;
+import com.attitude433.ark.engine.ManaEngine;
 import com.attitude433.ark.engine.StatEngine;
 import com.attitude433.ark.player.ArkAttachments;
 import com.attitude433.ark.player.PlayerStats;
 import com.attitude433.ark.registry.ArkRegistries;
 import com.attitude433.ark.stat.PrimaryStat;
+import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
@@ -45,8 +47,41 @@ public final class ArkCommands {
                         .then(Commands.literal("set")
                                 .then(Commands.argument("stat", ResourceLocationArgument.id())
                                         .then(Commands.argument("value", IntegerArgumentType.integer())
-                                                .executes(ArkCommands::statSet)))));
+                                                .executes(ArkCommands::statSet)))))
+                .then(Commands.literal("mana")
+                        .then(Commands.literal("get").executes(ArkCommands::manaGet))
+                        .then(Commands.literal("set")
+                                .then(Commands.argument("value", FloatArgumentType.floatArg(0.0f))
+                                        .executes(ArkCommands::manaSet))));
         event.getDispatcher().register(root);
+    }
+
+    private static int manaGet(com.mojang.brigadier.context.CommandContext<CommandSourceStack> ctx)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        PlayerStats stats = player.getData(ArkAttachments.PLAYER_STATS);
+        float current = stats.currentMana();
+        float max = ManaEngine.maxMana(stats);
+        boolean combat = ManaEngine.isInCombat(player, stats);
+        long sinceCombat = player.tickCount - stats.lastCombatTick();
+        ctx.getSource().sendSystemMessage(Component.literal(String.format(
+                "[ARK] mana %.1f / %.1f %s",
+                current, max,
+                combat ? "(in combat, " + sinceCombat + "t since last)" : "(out of combat)")));
+        return 1;
+    }
+
+    private static int manaSet(com.mojang.brigadier.context.CommandContext<CommandSourceStack> ctx)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        float value = FloatArgumentType.getFloat(ctx, "value");
+        PlayerStats stats = player.getData(ArkAttachments.PLAYER_STATS);
+        float max = ManaEngine.maxMana(stats);
+        float clamped = Math.min(max, value);
+        stats.setCurrentMana(clamped);
+        ctx.getSource().sendSystemMessage(Component.literal(String.format(
+                "[ARK] (debug) mana = %.1f / %.1f", clamped, max)));
+        return 1;
     }
 
     private static int statGet(com.mojang.brigadier.context.CommandContext<CommandSourceStack> ctx)

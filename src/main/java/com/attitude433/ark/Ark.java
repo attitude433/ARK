@@ -1,5 +1,6 @@
 package com.attitude433.ark;
 
+import com.attitude433.ark.engine.ManaEngine;
 import com.attitude433.ark.engine.StatEngine;
 import com.attitude433.ark.player.ArkAttachments;
 import com.attitude433.ark.player.PlayerStats;
@@ -99,15 +100,17 @@ public class Ark {
         }
 
         /**
-         * 매 1초(20틱)마다 현재 레벨로 highestLevel 갱신.
-         * 이벤트를 발생시키지 않는 경로(/xp set, 기타 명령)도 잡기 위한 안전망.
+         * 매 틱: 마나 재생 (전투 상태에 따라 다름).
+         * 매 20틱: highestLevel 폴링 — /xp set 같이 이벤트 없는 경로 안전망.
          */
         @SubscribeEvent
         public static void onPlayerTick(PlayerTickEvent.Post event) {
             if (!(event.getEntity() instanceof ServerPlayer sp)) return;
-            if (sp.tickCount % 20 != 0) return;
-            PlayerStats stats = sp.getData(ArkAttachments.PLAYER_STATS);
-            stats.updateHighestLevel(sp.experienceLevel);
+            ManaEngine.tickRegenerate(sp);
+            if (sp.tickCount % 20 == 0) {
+                PlayerStats stats = sp.getData(ArkAttachments.PLAYER_STATS);
+                stats.updateHighestLevel(sp.experienceLevel);
+            }
         }
 
         /**
@@ -134,19 +137,27 @@ public class Ark {
         }
 
         /**
-         * 인내(endurance) 비율 피해 감소.
-         * 갑옷·인챈트 등 모든 vanilla 감소가 적용된 *최종 데미지*에 곱연산.
-         * (※ 데이터팩 주도 설계에서 살짝 벗어난 하드코드 — 마력·제압 슬라이스에서
-         * 효과 부품(damage_reduction)으로 일반화 예정.)
+         * 인내(endurance) 비율 피해 감소 + 전투 상태 추적(피해자·공격자 모두).
+         * (※ endurance 부분은 데이터팩 주도 설계에서 살짝 벗어난 하드코드 —
+         * 마력·제압 슬라이스에서 효과 부품으로 일반화 예정.)
          */
         @SubscribeEvent
         public static void onIncomingDamage(LivingIncomingDamageEvent event) {
-            if (!(event.getEntity() instanceof ServerPlayer sp)) return;
-            PlayerStats stats = sp.getData(ArkAttachments.PLAYER_STATS);
-            int endurance = stats.get(ENDURANCE_ID);
-            if (endurance <= 0) return;
-            float pct = Math.min(ENDURANCE_REDUCTION_CAP, endurance * ENDURANCE_PER_POINT_PCT);
-            event.setAmount(event.getAmount() * (1.0f - pct));
+            // 1) 인내 감소 (피해자가 플레이어일 때)
+            if (event.getEntity() instanceof ServerPlayer victim) {
+                PlayerStats stats = victim.getData(ArkAttachments.PLAYER_STATS);
+                int endurance = stats.get(ENDURANCE_ID);
+                if (endurance > 0) {
+                    float pct = Math.min(ENDURANCE_REDUCTION_CAP, endurance * ENDURANCE_PER_POINT_PCT);
+                    event.setAmount(event.getAmount() * (1.0f - pct));
+                }
+                stats.markCombat(victim.tickCount);
+            }
+            // 2) 공격자가 플레이어면 그도 전투 상태
+            if (event.getSource().getEntity() instanceof ServerPlayer attacker) {
+                PlayerStats stats = attacker.getData(ArkAttachments.PLAYER_STATS);
+                stats.markCombat(attacker.tickCount);
+            }
         }
     }
 }

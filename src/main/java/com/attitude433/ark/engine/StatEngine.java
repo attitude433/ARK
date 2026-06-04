@@ -66,6 +66,15 @@ public final class StatEngine {
         }
         // 현재 경험치 레벨도 highestLevel에 반영 (모드 추가 후 첫 진입 등).
         stats.updateHighestLevel(player.experienceLevel);
+
+        // 신규/첫 진입 마나 초기화 (음수·0이면 풀로) + 능력치 변동에 따른 max 클램프.
+        float max = ManaEngine.maxMana(stats);
+        if (stats.currentMana() <= 0.0f) {
+            stats.setCurrentMana(max);
+        } else if (stats.currentMana() > max) {
+            stats.setCurrentMana(max);
+        }
+
         recompute(player);
     }
 
