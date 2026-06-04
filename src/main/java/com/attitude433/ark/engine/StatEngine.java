@@ -47,6 +47,26 @@ public final class StatEngine {
     }
 
     /**
+     * 데이터팩에 정의된 능력치 중 PlayerStats에 *없는* 항목을 {@code default_value}로 채운 뒤 재계산.
+     * 신규 플레이어·신규 데이터팩 능력치 발견 시 호출.
+     */
+    public static void ensureDefaultsAndRecompute(ServerPlayer player) {
+        MinecraftServer server = player.getServer();
+        if (server == null) return;
+
+        Registry<PrimaryStat> defs = server.registryAccess().registryOrThrow(ArkRegistries.PRIMARY_STAT_KEY);
+        PlayerStats stats = player.getData(ArkAttachments.PLAYER_STATS);
+
+        for (var entry : defs.entrySet()) {
+            ResourceLocation id = entry.getKey().location();
+            if (!stats.has(id)) {
+                stats.set(id, entry.getValue().defaultValue());
+            }
+        }
+        recompute(player);
+    }
+
+    /**
      * 플레이어의 모든 파생 규칙을 다시 적용.
      * (접속·리스폰·차원 이동·데이터팩 리로드 시에도 호출 예정.)
      */
