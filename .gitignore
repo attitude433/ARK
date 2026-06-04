@@ -1,2 +1,43 @@
 # Claude Code 개인 설정 (커밋 금지)
 .claude/settings.local.json
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/**/build/
+
+# NeoForge / Minecraft 개발
+run/
+runs/
+run-data/
+logs/
+*.log
+
+# IDE — IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# IDE — Eclipse
+.settings/
+.metadata/
+.classpath
+.project
+bin/
+
+# IDE — VS Code
+.vscode/
+
+# Java / 빌드 산출물
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+*.war
+hs_err_pid*
+
+# OS
+.DS_Store
+Thumbs.db
