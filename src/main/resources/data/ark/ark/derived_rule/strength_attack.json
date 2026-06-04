@@ -1,0 +1,6 @@
+{
+  "source": "ark:strength",
+  "target": "minecraft:attack_damage",
+  "operation": "add_value",
+  "per_point": 0.5
+}
